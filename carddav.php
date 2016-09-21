@@ -352,6 +352,44 @@ class carddav_backend
 	}
 
 	/**
+	 * Gets all available vCard + XML from the CardDAV Server
+	 *
+	 * @param	string		$vcard_id	vCard id on the CardDAV Server
+	 * @return	string					Raw or simplified vCard (text/xml)
+	 */
+	public function get_xml_vcards()
+	{
+		$xml = new XMLWriter();
+		$xml->openMemory();
+		$xml->setIndent(4);
+		$xml->startDocument('1.0', 'utf-8');
+			$xml->startElement('C:addressbook-query');
+				$xml->writeAttribute('xmlns:D', 'DAV:');
+				$xml->writeAttribute('xmlns:C', 'urn:ietf:params:xml:ns:carddav');
+				$xml->startElement('D:prop');
+					$xml->writeElement('D:getetag');
+					//$xml->writeElement('D:getlastmodified');
+				$xml->endElement();
+
+			$xml->endElement();
+		$xml->endDocument();
+
+		$result = $this->query($this->url, 'REPORT', $xml->outputMemory(), 'text/xml');
+
+		switch ($result['http_code'])
+		{
+			case 200:
+			case 207:
+				return $this->simplify($result['response'], true);
+			break;
+
+			default:
+				throw new Exception('Woops, something\'s gone wrong! The CardDAV server returned the http status code ' . $result['http_code'] . '.', self::EXCEPTION_WRONG_HTTP_STATUS_CODE_GET_XML_VCARD);
+			break;
+		}
+	}
+
+	/**
 	 * Enables the debug mode
 	 *
 	 * @return	void
